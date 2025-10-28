@@ -1,5 +1,61 @@
 import sys
 try:
+    from plugin_integration.badbanana.badbanana_main import run_badbanana
+    BB_AVAILABLE = True
+except Exception:
+    BB_AVAILABLE = False
+try:
+    from plugin_integration.own.own_main import run_own
+    OWN_AVAILABLE = True
+except Exception:
+    OWN_AVAILABLE = False
+try:
+    from plugin_integration.blackglass.blackglass_main import run_blackglass
+    BG_AVAILABLE = True
+except Exception:
+    BG_AVAILABLE = False
+
+# PLUGIN_INTEGRATION_HOOK
+# Safely handle plugin flags before argparse (so unknown flags won't break the tool)
+plugin_flags = ["--shenron","--badbanana","--own","--blackglass"]
+requested = { 'shenron': '--shenron' in sys.argv,
+              'badbanana': '--badbanana' in sys.argv,
+              'own': '--own' in sys.argv,
+              'blackglass': '--blackglass' in sys.argv }
+# Remove plugin flags so argparse won't fail
+sys.argv = [a for a in sys.argv if a not in plugin_flags]
+# Auto-detect host argument (first non-flag)
+host_arg = next((a for a in sys.argv[1:] if not a.startswith('-')), None)
+if host_arg:
+    targets = [host_arg]
+else:
+    targets = []
+
+# Run plugins requested (non-blocking; order: Shenron, BadBanana, Own, BlackGlass)
+if requested.get('shenron'):
+    try:
+        from shenron_integration.shenron_main import run_shenron_in_decoyhunter
+        run_shenron_in_decoyhunter(targets)
+    except Exception as e:
+        print('[plugin] Shenron failed:', e)
+if requested.get('badbanana') and BB_AVAILABLE:
+    try:
+        run_badbanana(targets)
+    except Exception as e:
+        print('[plugin] BadBanana failed:', e)
+if requested.get('own') and OWN_AVAILABLE:
+    try:
+        run_own(targets)
+    except Exception as e:
+        print('[plugin] Own failed:', e)
+if requested.get('blackglass') and BG_AVAILABLE:
+    try:
+        run_blackglass(targets)
+    except Exception as e:
+        print('[plugin] BlackGlass failed:', e)
+
+import sys
+try:
     from shenron_integration.shenron_main import run_shenron_in_decoyhunter
     SHENRON_AVAILABLE = True
 except ImportError:

@@ -1,3 +1,18 @@
+import sys
+try:
+    from shenron_integration.shenron_main import run_shenron_in_decoyhunter
+    SHENRON_AVAILABLE = True
+except ImportError:
+    SHENRON_AVAILABLE = False
+
+# Safe Shenron hook
+if '--shenron' in sys.argv and SHENRON_AVAILABLE:
+    sys.argv.remove('--shenron')  # remove before argparse
+    # auto-detect host argument (first positional argument)
+    host_arg = next((a for a in sys.argv[1:] if not a.startswith('-')), None)
+    targets = [host_arg] if host_arg else []
+    run_shenron_in_decoyhunter(targets)
+
 try:
     from shenron_integration.shenron_main import run_shenron_in_decoyhunter
     SHENRON_AVAILABLE = True
