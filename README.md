@@ -59,3 +59,11 @@ The defensive deception technique this tool detects is documented at [s0i37's de
 ---
 
 *Decoy-Hunter // badBANANA research // GnomeMan4201*
+
+---
+
+## Demo
+
+<p align="center">
+  <img src="assets/decoy_hunter_demo.png" alt="Decoy-Hunter scan output" width="780"/>
+</p>
