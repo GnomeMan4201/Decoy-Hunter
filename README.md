@@ -1,4 +1,19 @@
 # Decoy-Hunter
+[![CI](https://github.com/GnomeMan4201/Decoy-Hunter/actions/workflows/ci.yml/badge.svg)](https://github.com/GnomeMan4201/Decoy-Hunter/actions/workflows/ci.yml)
+
+
+> **Fork of [toxy4ny/Decoy-Hunter](https://github.com/toxy4ny/Decoy-Hunter) by KL3FT3Z**
+> Original concept by [s0i37](https://github.com/s0i37/defence)
+> This fork adds: badBANANA ecosystem plugin integrations (Blackglass_Suite, OWN, bad_BANANA), Shenron analytics integration, and extended test coverage.
+
+---
+
+**Bypasses "all ports open" deception infrastructure to identify real attack surfaces.**
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](#)
+[![Upstream](https://img.shields.io/badge/upstream-toxy4ny%2FDecoy--Hunter-555?style=flat-square)](https://github.com/toxy4ny/Decoy-Hunter)
+
 
 > **Fork of [toxy4ny/Decoy-Hunter](https://github.com/toxy4ny/Decoy-Hunter) by KL3FT3Z**
 > Original concept by [s0i37](https://github.com/s0i37/defence)
