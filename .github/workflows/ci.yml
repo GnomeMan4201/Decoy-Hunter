@@ -26,11 +26,24 @@ jobs:
       - name: Compile main module
         run: python -m py_compile decoy_hunter.py
 
+      - name: Verify CLI help
+        run: python decoy_hunter.py --help >/dev/null
+
+      - name: Verify port parser and import safety
+        run: |
+          python - <<'PY'
+          import decoy_hunter
+          assert decoy_hunter.parse_ports("22,80,443") == [22, 80, 443]
+          assert decoy_hunter.parse_ports("80-82,81") == [80, 81, 82]
+          assert decoy_hunter.parse_ports("0,1,65535,65536") == [1, 65535]
+          print("offline smoke checks passed")
+          PY
+
       - name: Run tests when present
         shell: bash
         run: |
           if [ -d tests ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
             python -m pytest tests/ -v --tb=short
           else
-            echo "No pytest test files present; compile smoke check is the configured validation gate."
+            echo "No pytest test files present; compile + CLI + parser checks are the configured validation gate."
           fi
