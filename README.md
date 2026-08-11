@@ -100,14 +100,6 @@ Network behavior, middleboxes, rate limiting, and deception products can all aff
 
 ---
 
-## Legacy integration stubs
-
-The repository still contains historical placeholder modules under `plugin_integration/`. They produce synthetic/demo values and are **not part of the supported analytical surface**. The main CLI no longer invokes or advertises them as working badBANANA, Blackglass, OWN, or SHENRON integrations.
-
-They are retained only as project-history artifacts until there is a real, testable integration contract worth implementing or the placeholders are removed in a dedicated cleanup.
-
----
-
 ## Upstream and attribution
 
 This repository builds on prior work rather than presenting the technique as original to this fork:
