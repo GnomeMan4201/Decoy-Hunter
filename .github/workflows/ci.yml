@@ -29,13 +29,30 @@ jobs:
       - name: Verify CLI help
         run: python decoy_hunter.py --help >/dev/null
 
-      - name: Verify port parser and import safety
+      - name: Verify parser, import safety, and probe resolution
         run: |
           python - <<'PY'
+          import tempfile
+          from pathlib import Path
+
           import decoy_hunter
+
           assert decoy_hunter.parse_ports("22,80,443") == [22, 80, 443]
           assert decoy_hunter.parse_ports("80-82,81") == [80, 81, 82]
           assert decoy_hunter.parse_ports("0,1,65535,65536") == [1, 65535]
+
+          with tempfile.TemporaryDirectory() as tmp:
+              probe = Path(tmp) / "nmap-service-probes"
+              probe.write_text("# smoke fixture\n", encoding="utf-8")
+              assert decoy_hunter.resolve_probe_file(str(probe)) == str(probe)
+
+          try:
+              decoy_hunter.resolve_probe_file("/definitely/missing/nmap-service-probes")
+          except FileNotFoundError:
+              pass
+          else:
+              raise AssertionError("missing explicit probe path must fail closed")
+
           print("offline smoke checks passed")
           PY
 
@@ -45,5 +62,5 @@ jobs:
           if [ -d tests ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
             python -m pytest tests/ -v --tb=short
           else
-            echo "No pytest test files present; compile + CLI + parser checks are the configured validation gate."
+            echo "No pytest test files present; compile + CLI + parser + probe-resolution checks are the configured validation gate."
           fi
