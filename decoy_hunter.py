@@ -4,9 +4,9 @@
 import argparse
 import asyncio
 import logging
-import os
 import sys
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
 from tqdm.asyncio import tqdm
 
@@ -32,9 +32,34 @@ LOGO = r"""
   Advanced Decoy Detection Toolkit by FL3FT3Z (https://github.com/toxy4ny) versus cool man s0i37 (https://github.com/s0i37/defence)
 """
 
+PROBE_FILE_CANDIDATES = (
+    Path("nmap-service-probes"),
+    Path("/usr/share/nmap/nmap-service-probes"),
+    Path("/usr/local/share/nmap/nmap-service-probes"),
+)
 
-def print_logo():
+
+def print_logo() -> None:
     print(LOGO)
+
+
+def resolve_probe_file(requested: Optional[str] = None) -> str:
+    """Resolve an nmap-service-probes file without downloading at runtime."""
+    if requested:
+        path = Path(requested).expanduser()
+        if path.is_file():
+            return str(path)
+        raise FileNotFoundError(f"nmap-service-probes file not found: {path}")
+
+    for candidate in PROBE_FILE_CANDIDATES:
+        if candidate.is_file():
+            return str(candidate)
+
+    checked = ", ".join(str(path) for path in PROBE_FILE_CANDIDATES)
+    raise FileNotFoundError(
+        "nmap-service-probes was not found. Install nmap or pass "
+        f"--probe-file PATH. Checked: {checked}"
+    )
 
 
 async def scan_port(host: str, port: int, proto: str, timeout: int, semaphore, results):
@@ -48,7 +73,7 @@ async def scan_port(host: str, port: int, proto: str, timeout: int, semaphore, r
         banner_str = banner.decode("utf-8", errors="replace").strip().replace("\n", " \\n ")[:100]
         result_line = (
             f"{status} {port}/{proto} {'open' if is_real or banner else 'closed'} "
-            f"{svc} (via {probe_used}) → {banner_str}"
+            f"{svc} (via {probe_used}) -> {banner_str}"
         )
         results.append((is_real, port, proto, result_line))
 
@@ -90,28 +115,6 @@ def parse_ports(port_str: str) -> List[int]:
     return sorted(set(p for p in ports if 1 <= p <= 65535))
 
 
-def run_requested_integrations(args) -> None:
-    """Run explicitly requested ecosystem integrations after CLI parsing."""
-    targets = [args.host]
-
-    integrations = [
-        (args.shenron, "Shenron", "shenron_integration.shenron_main", "run_shenron_in_decoyhunter"),
-        (args.badbanana, "BadBanana", "plugin_integration.badbanana.badbanana_main", "run_badbanana"),
-        (args.own, "OWN", "plugin_integration.own.own_main", "run_own"),
-        (args.blackglass, "BlackGlass", "plugin_integration.blackglass.blackglass_main", "run_blackglass"),
-    ]
-
-    for requested, label, module_name, function_name in integrations:
-        if not requested:
-            continue
-        try:
-            module = __import__(module_name, fromlist=[function_name])
-            runner = getattr(module, function_name)
-            runner(targets)
-        except Exception as exc:
-            logger.warning("[plugin] %s failed: %s", label, exc)
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Detect fake services behind 'all ports open' deception",
@@ -125,12 +128,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-sU", "--udp", action="store_true", help="Also scan UDP")
     parser.add_argument("-c", "--concurrency", type=int, default=15, help="Max concurrent connections")
     parser.add_argument("-t", "--timeout", type=int, default=6, help="Timeout per probe (seconds)")
-    parser.add_argument("--probe-file", default="nmap-service-probes", help="Path to nmap-service-probes")
+    parser.add_argument(
+        "--probe-file",
+        default=None,
+        help="Path to nmap-service-probes; defaults to local/system nmap locations",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
-    parser.add_argument("--shenron", action="store_true", help="Run the optional Shenron integration")
-    parser.add_argument("--badbanana", action="store_true", help="Run the optional badBANANA integration")
-    parser.add_argument("--own", action="store_true", help="Run the optional OWN integration")
-    parser.add_argument("--blackglass", action="store_true", help="Run the optional Blackglass integration")
     return parser
 
 
@@ -146,12 +149,13 @@ def main(argv=None):
     if args.timeout < 1:
         raise SystemExit("--timeout must be at least 1 second")
 
-    if not os.path.exists(args.probe_file):
-        logger.error("[!] nmap-service-probes file not found at: %s", args.probe_file)
-        logger.error("Provide a local nmap-service-probes file with --probe-file PATH")
-        raise SystemExit(1)
+    try:
+        probe_file = resolve_probe_file(args.probe_file)
+    except FileNotFoundError as exc:
+        logger.error("[!] %s", exc)
+        raise SystemExit(1) from exc
 
-    init_probes(args.probe_file)
+    init_probes(probe_file)
 
     try:
         ports = parse_ports(args.ports)
@@ -167,15 +171,13 @@ def main(argv=None):
     logger.info("[*] Target: %s", args.host)
     logger.info("[*] Ports: %d (%s)", len(ports), "TCP + UDP" if args.udp else "TCP only")
     logger.info("[*] Concurrency: %d | Timeout: %ds", args.concurrency, args.timeout)
-    logger.info("[*] Using local nmap-service-probes\n")
+    logger.info("[*] Probe file: %s\n", probe_file)
 
     try:
         asyncio.run(run_scan(args.host, ports, protocols, args.concurrency, args.timeout))
     except KeyboardInterrupt:
         print("\n[!] Interrupted by user.")
         raise SystemExit(1)
-
-    run_requested_integrations(args)
 
 
 if __name__ == "__main__":
