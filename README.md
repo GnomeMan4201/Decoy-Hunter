@@ -7,7 +7,7 @@
 
 **Protocol-aware service validation for networks where deception infrastructure makes every TCP port appear open.**
 
-> Fork of [toxy4ny/Decoy-Hunter](https://github.com/toxy4ny/Decoy-Hunter) by KL3FT3Z. Original concept by [s0i37](https://github.com/s0i37/defence). This fork adds badBANANA ecosystem integrations and Shenron-oriented analysis hooks.
+> Fork of [toxy4ny/Decoy-Hunter](https://github.com/toxy4ny/Decoy-Hunter) by KL3FT3Z. Original concept by [s0i37](https://github.com/s0i37/defence). Local changes in this fork are documented through Git history and should be evaluated separately from upstream behavior.
 
 ---
 
@@ -22,10 +22,11 @@ The result is a narrower, evidence-driven view of likely real services instead o
 ## How it works
 
 1. Accept a target authorized for assessment.
-2. Probe candidate services using protocol-aware request data derived from nmap service probes.
-3. Compare returned behavior with expected service characteristics.
-4. Separate likely authentic services from generic deception responders.
-5. Surface the reduced set for follow-up investigation.
+2. Load a local `nmap-service-probes` database.
+3. Probe candidate services with protocol-aware request data.
+4. Compare returned behavior with expected service characteristics.
+5. Separate likely authentic services from generic deception responders.
+6. Surface the reduced set for follow-up investigation.
 
 This is a validation layer, not a replacement for broader reconnaissance. Its useful signal is the difference between *a port answering* and *a service behaving like the protocol it claims to be*.
 
@@ -37,7 +38,14 @@ This is a validation layer, not a replacement for broader reconnaissance. Its us
 
 - Python 3.10+
 - Linux recommended
+- nmap, for the local `nmap-service-probes` database
 - network access to the authorized target
+
+On Debian/Ubuntu-family systems:
+
+```bash
+sudo apt install nmap
+```
 
 ### Install
 
@@ -52,13 +60,12 @@ pip install -r requirements.txt
 
 ### Verify the checkout
 
-A fast offline syntax check:
-
 ```bash
 python -m py_compile decoy_hunter.py
+python decoy_hunter.py --help
 ```
 
-The GitHub Actions workflow performs the same fail-closed smoke validation and runs pytest when repository tests are present. A green badge therefore means the checked revision passed the validation actually configured in CI; it is not presented as proof of live-target behavior.
+The GitHub Actions workflow verifies compilation, CLI startup, import safety, deterministic port parsing, and fail-closed probe-file resolution. If pytest tests are present, CI runs those as an additional gate. A green badge means those configured checks passed for that revision; it is not evidence of live-target classification accuracy.
 
 ---
 
@@ -68,19 +75,36 @@ The GitHub Actions workflow performs the same fail-closed smoke validation and r
 python3 decoy_hunter.py <target>
 ```
 
-Use only against systems and networks you are authorized to assess. Network behavior, middleboxes, rate limiting, and deception products can all affect results, so treat classifications as evidence for follow-up rather than absolute attribution.
+By default, the CLI looks for `nmap-service-probes` in:
+
+```text
+./nmap-service-probes
+/usr/share/nmap/nmap-service-probes
+/usr/local/share/nmap/nmap-service-probes
+```
+
+Use an explicit database when needed:
+
+```bash
+python3 decoy_hunter.py <target> --probe-file /path/to/nmap-service-probes
+```
+
+Custom port examples:
+
+```bash
+python3 decoy_hunter.py 192.0.2.10 -p 22,80,443
+python3 decoy_hunter.py 192.0.2.10 -p 1-1024 -sU
+```
+
+Network behavior, middleboxes, rate limiting, and deception products can all affect results, so treat classifications as evidence for follow-up rather than absolute attribution.
 
 ---
 
-## Plugin integrations
+## Legacy integration stubs
 
-This fork includes integrations for the wider badBANANA research toolchain:
+The repository still contains historical placeholder modules under `plugin_integration/`. They produce synthetic/demo values and are **not part of the supported analytical surface**. The main CLI no longer invokes or advertises them as working badBANANA, Blackglass, OWN, or SHENRON integrations.
 
-- `plugin_integration/badbanana/` — badBANANA integration
-- `plugin_integration/blackglass/` — Blackglass Suite integration
-- `plugin_integration/own/` — OWN framework integration
-
-These adapters keep the core probe logic usable independently while allowing findings to be handed into adjacent analysis workflows.
+They are retained only as project-history artifacts until there is a real, testable integration contract worth implementing or the placeholders are removed in a dedicated cleanup.
 
 ---
 
